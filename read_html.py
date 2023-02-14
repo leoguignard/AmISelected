@@ -92,7 +92,7 @@ def get_candidates(name_to_check, year, sections_to_check = [], first_run=False)
         for section, status in sections.items():
             if section in candidate_status:
                 current_status.setdefault(section, set()).add(status)
-    return candidate_status, current_status
+    return candidate_status, current_status, n
 
 if __name__ == '__main__':
     description="""Are you selected yet?
@@ -116,12 +116,11 @@ if __name__ == '__main__':
                         type=str, help='email where to send the news (default leo.guignard@gmail.com)')
 
     args = parser.parse_args()
-    if 1<len(args.name):
-        args.name = ' '.join(args.name)
+    args.name = ' '.join(args.name)
     print("Running with the following parameters:")
     print(f"\tName: {args.name}, Year: {args.year}\n")
 
-    candidate_init_status, init_status = get_candidates(args.name, args.year, args.sections, first_run=True)
+    candidate_init_status, init_status, using_name = get_candidates(args.name, args.year, args.sections, first_run=True)
     sections_applied_to = init_status.keys()
     print("I found you appearing in the following sections:")
     for section, status in candidate_init_status.items():
@@ -137,7 +136,7 @@ if __name__ == '__main__':
 
     while True:
         body = "Have I made it to the next round?\n"
-        candidate_status, current_status = get_candidates(args.name, args.year, sections_applied_to)
+        candidate_status, current_status, _ = get_candidates(using_name, args.year, sections_applied_to)
         for section, status in current_status.items():
             if init_status[section] != status:
                 print("Update has happened")
