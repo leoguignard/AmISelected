@@ -108,8 +108,6 @@ if __name__ == '__main__':
                         type=str, help='smtp (default LIS)')
     parser.add_argument('-p', '--port', default=587,
                         type=int, help='port for email (default 587)')
-    parser.add_argument('-pwd', '--password', default='',
-                        type=str, help='password for email')
     parser.add_argument('-u', '--username', default='leo.guignard',
                         type=str, help='password for email (default leo.guignard)')
     parser.add_argument('-r', '--recipient', default='leo.guignard@gmail.com',
@@ -120,6 +118,7 @@ if __name__ == '__main__':
     print("Running with the following parameters:")
     print(f"\tName: {args.name}, Year: {args.year}\n")
 
+    smtp_password = input("Please input your smtp account password to be able to send the email:\n")
     candidate_init_status, init_status, using_name = get_candidates(args.name, args.year, args.sections, first_run=True)
     sections_applied_to = init_status.keys()
     print("I found you appearing in the following sections:")
@@ -129,7 +128,7 @@ if __name__ == '__main__':
     smtp_server = args.smtp
     smtp_port = args.port
     smtp_username = args.username
-    smtp_password = args.password
+    # smtp_password = args.password
     sender = f"{smtp_username}@{smtp_server.removeprefix('smtp.')}"
     recipient = args.recipient
     subject = '[CNRS] Am I selected??'
