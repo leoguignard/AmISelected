@@ -118,18 +118,18 @@ if __name__ == '__main__':
     args.name = ' '.join(args.name)
     print("Running with the following parameters:")
     print(f"\tName: {args.name}, Year: {args.year}\n")
+    
+    smtp_server = args.smtp
+    smtp_port = args.port
+    smtp_username = args.username
 
-    smtp_password = getpass("Please input your smtp account password to be able to send the email:\n")
+    print(f"Please input the {args.smtp} account password for the user {smtp_username}.")
+    smtp_password = getpass("Password: ")
     candidate_init_status, init_status, using_name = get_candidates(args.name, args.year, args.sections, first_run=True)
     sections_applied_to = init_status.keys()
     print("I found you appearing in the following sections:")
     for section, status in candidate_init_status.items():
         print(f"\tSection {section}, status: {status}")
-    
-    smtp_server = args.smtp
-    smtp_port = args.port
-    smtp_username = args.username
-    # smtp_password = args.password
     sender = f"{smtp_username}@{smtp_server.removeprefix('smtp.')}"
     recipient = args.recipient
     subject = '[CNRS] Am I selected??'
