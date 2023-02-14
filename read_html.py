@@ -5,6 +5,7 @@ import urllib.request
 import argparse
 import smtplib
 import datetime
+from getpass import getpass
 
 def get_candidates(name_to_check, year, sections_to_check = [], first_run=False):
     result_page = "https://www.coudert.name/concours_cnrs_{year}.html"
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     print("Running with the following parameters:")
     print(f"\tName: {args.name}, Year: {args.year}\n")
 
-    smtp_password = input("Please input your smtp account password to be able to send the email:\n")
+    smtp_password = getpass("Please input your smtp account password to be able to send the email:\n")
     candidate_init_status, init_status, using_name = get_candidates(args.name, args.year, args.sections, first_run=True)
     sections_applied_to = init_status.keys()
     print("I found you appearing in the following sections:")
