@@ -3,9 +3,10 @@ import re
 from time import sleep
 import urllib.request
 import argparse
-from pathlib import Path
+import smtplib
+import datetime
 
-def get_candidates(name_to_check, year, sections_to_check = []):
+def get_candidates(name_to_check, year, sections_to_check = [], first_run=False):
     result_page = "https://www.coudert.name/concours_cnrs_{year}.html"
     check_num = re.compile('\([0-9]+\)')
     table = {}
@@ -72,7 +73,20 @@ def get_candidates(name_to_check, year, sections_to_check = []):
                     info[section] = curr_status
                 elif table[name][section] != 'Admis':
                     table[name][section] = curr_status
-    candidate_status = [table[v] for v in table if find_name.search(v)][0]
+    matching_name = [v for v in table if find_name.search(v)]
+    if len(matching_name)==0:
+        print(f"\n!!{name_to_check} not found, please check the spelling !!\n")
+        quit()
+    elif 1<len(matching_name):
+        print(f"\n!! Found multiple possibilities for {name_to_check}:\n")
+        for n in matching_name:
+            print(f"\t{n}")
+        print(f"We will use {matching_name[0]} !!\n")
+    elif first_run:
+        print(f"We found the name {matching_name[0]}")
+        print(f"We hope they are the one you were looking for\n")
+    n = matching_name[0]
+    candidate_status = table[n]
     current_status = {}
     for name, sections in table.items():
         for section, status in sections.items():
@@ -86,54 +100,66 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-s', '--sections', nargs='*', default=[],
                         type=int, help='Inform the sections to check')
-    parser.add_argument('-n', '--name', nargs=1, default='guignard léo',
+    parser.add_argument('-n', '--name', nargs='+', default=['guignard', 'léo'],
                         type=str, help='Name to look for')
-    parser.add_argument('-y', '--year', nargs=1, default=2023,
+    parser.add_argument('-y', '--year', default=2023,
                         type=int, help='Inform the years to check')
-    parser.add_argument('-m', '--email', default='',
-                        type=str, help='email to inform')
+    parser.add_argument('-t', '--smtp', default='smtp.lis-lab.fr',
+                        type=str, help='smtp (default LIS)')
+    parser.add_argument('-p', '--port', default=587,
+                        type=int, help='port for email (default 587)')
+    parser.add_argument('-pwd', '--password', default='',
+                        type=str, help='password for email')
+    parser.add_argument('-u', '--username', default='leo.guignard',
+                        type=str, help='password for email (default leo.guignard)')
+    parser.add_argument('-r', '--recipient', default='leo.guignard@gmail.com',
+                        type=str, help='email where to send the news (default leo.guignard@gmail.com)')
 
     args = parser.parse_args()
-
-    candidate_init_status, init_status = get_candidates(args.name, args.year, args.sections)
-    sections_applied_to = init_status.keys()
+    if 1<len(args.name):
+        args.name = ' '.join(args.name)
     print("Running with the following parameters:")
-    print(f"\tName: {args.name}, Year: {args.year}")
-    print("I found you as follow:")
+    print(f"\tName: {args.name}, Year: {args.year}\n")
+
+    candidate_init_status, init_status = get_candidates(args.name, args.year, args.sections, first_run=True)
+    sections_applied_to = init_status.keys()
+    print("I found you appearing in the following sections:")
     for section, status in candidate_init_status.items():
         print(f"\tSection {section}, status: {status}")
+    
+    smtp_server = args.smtp
+    smtp_port = args.port
+    smtp_username = args.username
+    smtp_password = args.password
+    sender = f"{smtp_username}@{smtp_server.removeprefix('smtp.')}"
+    recipient = args.recipient
+    subject = '[CNRS] Am I selected??'
 
     while True:
+        body = "Have I made it to the next round?\n"
         candidate_status, current_status = get_candidates(args.name, args.year, sections_applied_to)
         for section, status in current_status.items():
             if init_status[section] != status:
                 print("Update has happened")
                 if candidate_init_status[section] == candidate_status[section]:
                     print("You haven't made it to the next round :(")
+                    body += f"\tNope (section {section})\n"
                 else:
                     print(f"You are now listed as {candidate_status[section]}")
-            else:
-                print("still no update")
+                    body += f"\tYes, You are now listed as {candidate_status[section]} in section {section}"
+        candidate_init_status = candidate_status
+        init_status = current_status
+        if body != "Have I made it to the next round?\n":
+            message = f'Subject: {subject}\n\n{body}'
+            smtp_connection = smtplib.SMTP(smtp_server, smtp_port)
+            smtp_connection.starttls()  # enable TLS encryption
+            try:
+                smtp_connection.login(smtp_username, smtp_password)
+                smtp_connection.sendmail(sender, recipient, message)
+                smtp_connection.quit()
+            except Exception as e:
+                print(f'Could not send the email: {e}')
+        else:
+            current_time = datetime.datetime.now()
+            print(f"\nOn the {current_time.strftime('%d/%m at %H:%M:%S')} ... still no update")
         sleep(10*60)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
