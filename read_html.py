@@ -134,6 +134,7 @@ if __name__ == '__main__':
     recipient = args.recipient
     subject = '[CNRS] Am I selected??'
 
+    start_time = datetime.datetime.now()
     while True:
         body = "Have I made it to the next round?\n"
         candidate_status, current_status, _ = get_candidates(using_name, args.year, sections_applied_to)
@@ -161,4 +162,16 @@ if __name__ == '__main__':
         else:
             current_time = datetime.datetime.now()
             print(f"\nOn the {current_time.strftime('%d/%m at %H:%M:%S')} ... still no update")
+        if 4<(datetime.datetime.now() - start_time).seconds/60/60:
+            if 7<datetime.datetime.now().hour<20:
+                message = f'Subject: [CNRS] Still no news\n\nYep, nothing ...'
+                smtp_connection = smtplib.SMTP(smtp_server, smtp_port)
+                smtp_connection.starttls()  # enable TLS encryption
+                try:
+                    smtp_connection.login(smtp_username, smtp_password)
+                    smtp_connection.sendmail(sender, recipient, message)
+                    smtp_connection.quit()
+                except Exception as e:
+                    print(f'Could not send the email: {e}')
+                start_time = datetime.datetime.now()
         sleep(10*60)
