@@ -1,4 +1,5 @@
 #! python
+from enum import Enum
 import re
 from time import sleep
 import urllib.request
@@ -7,93 +8,58 @@ import smtplib
 import datetime
 from getpass import getpass
 
-def get_candidates(name_to_check, year, sections_to_check = [], first_run=False):
-    result_page = "https://www.coudert.name/concours_cnrs_{year}.html"
-    check_num = re.compile('\([0-9]+\)')
-    table = {}
-    try:
-        with urllib.request.urlopen(result_page.format(year=year)) as fp:
-            mybytes = fp.read()
-            html_doc = mybytes.decode("utf8")
-    except Exception as e:
-        print(f'The year {year} was probably not found.')
-        print(f'Page requested: {result_page.format(year=year)}')
-        print(f'The raise error: {e}')
-        exit
-    find_name = re.compile(name_to_check, re.IGNORECASE)
+class Stages(Enum):
+    START = "ADMCONC"
+    CONTINUE = "ADMAPOUR"
+    ADMIN = "ADMISSIBILITE"
+    FINAL = "ADMISSION"
 
-    find_section = re.compile('[0-9][0-9]/[0-9][0-9]')
-    if sections_to_check == []:
-        sections_to_check = [int(find_section.search(line).group().split('/')[0]) for line in html_doc.splitlines() if find_section.search(line)]
-        sections_to_check = set(sections_to_check)
+    def __str__(self):
+        if self == self.START:
+            return "Admis(e) à Concourir"
+        elif self == self.CONTINUE:
+            return "Admis(e) à Poursuivre"
+        elif self == self.ADMIN:
+            return "Admis(e)"
+        elif self == self.FINAL:
+            return "Admission finale"
 
-    for section in sections_to_check:
-        start = html_doc.find(f'Concours {section:02d}')
-        found = True
-        while (not '(CRCN)' in html_doc[start:].splitlines()[0] and
-                found):
-            found = html_doc[start+1:].find(f'Concours {section:02d}')!=-1
-            start = html_doc[start+1:].find(f'Concours {section:02d}')+start+1
-        if not found:
-            continue
-        stop = html_doc[start:].find('<h2>') + start
-        lines = html_doc[start:stop].splitlines()
-        curr_status = 'Admis'
-        if 'details' in lines[1]:
-            l_num = 2
-            curr_status = 'Concourir'
-        else:
-            l_num = 3
-        while l_num<len(lines)-2:
-            l = lines[l_num]
-            l_num += 1
-            if curr_status == 'Admis':
-                if 'table' in l:
-                    curr_status = 'Concourir'
-                    l_num += 1
-                else:
-                    start = l.find('<td>')+4
-                    stop = l.find('</td>')
-                    name = l[start:stop]
-                    name = name[:check_num.search(name).start()].strip()
-                    info = table.setdefault(name, {})
-                    info[section] = curr_status
-            elif curr_status == 'Concourir':
-                if 'details' in l:
-                    curr_status = 'Poursuivre'
-                    l_num += 1
-                else:
-                    name = l[:-5]
-                    if not table.get(name, {}).get(section):
-                        info = table.setdefault(name, {})
-                        info[section] = curr_status
-            else:
-                name = l[:-5]
-                if not table.get(name, {}).get(section):
-                    info = table.setdefault(name, {})
-                    info[section] = curr_status
-                elif table[name][section] != 'Admis':
-                    table[name][section] = curr_status
-    matching_name = [v for v in table if find_name.search(v)]
-    if len(matching_name)==0:
-        print(f"\n!!{name_to_check} not found, please check the spelling !!\n")
-        quit()
-    elif 1<len(matching_name):
-        print(f"\n!! Found multiple possibilities for {name_to_check}:\n")
-        for n in matching_name:
-            print(f"\t{n}")
-        print(f"We will use {matching_name[0]} !!\n")
-    elif first_run:
-        print(f"We found the name {matching_name[0]}")
-        print(f"We hope they are the one you were looking for\n")
-    n = matching_name[0]
-    candidate_status = table[n]
-    current_status = {}
-    for name, sections in table.items():
-        for section, status in sections.items():
-            if section in candidate_status:
-                current_status.setdefault(section, set()).add(status)
-    return candidate_status, current_status, n
+SECTIONS = list(range(1, 42)) + list(range(50, 56))
+
+def get_candidates_official(name_to_check, current_status=None):
+    url = (
+        "http://intersection.dsi.cnrs.fr/intersection/resultats-cc-fr.do?campagne=101"
+        "&section={section:02d}&grade=223&phase={adm:s}&conc={section:02d}/{conc:02d}"
+    )
+    if current_status is None:
+        print("Checking all sections:")
+        current_status = {}
+        for section in SECTIONS:
+            print(section, end=", ")
+            for conc in range(1, 6):
+                with urllib.request.urlopen(url.format(section=section, adm=Stages.START.value, conc=conc)) as fp:
+                    mybytes = fp.read()
+                if name_to_check.lower() in str(mybytes).lower():
+                    current_status[(section, conc)] = []
+    
+    # current_status = {}
+    new_status = {}
+    for section, conc in current_status:
+        # went_through = []
+        new_status[(section, conc)] = []
+        for stage in Stages:
+            with urllib.request.urlopen(url.format(section=section, adm=stage.value, conc=conc)) as fp:
+                mybytes = fp.read()
+            if not "pas encore" in str(mybytes):
+                    new_status[(section, conc)].append((stage, name_to_check.lower() in str(mybytes).lower()))
+    
+    return new_status
+    
+def print_results(current_status):
+    str_out = "Your current status is:\n"
+    for section, status in current_status.items():
+        str_out += f"\tSection {section[0]:02d}/{section[1]:02d}, status: " + ("" if status[-1][1] else "PAS ") + str(status[-1][0]) + "\n"
+    return str_out
 
 if __name__ == '__main__':
     description="""Are you selected yet?
@@ -125,31 +91,19 @@ if __name__ == '__main__':
 
     print(f"Please input the {args.smtp} account password for the user {smtp_username}.")
     smtp_password = getpass("Password: ")
-    candidate_init_status, init_status, using_name = get_candidates(args.name, args.year, args.sections, first_run=True)
-    sections_applied_to = init_status.keys()
-    print("I found you appearing in the following sections:")
-    for section, status in candidate_init_status.items():
-        print(f"\tSection {section}, status: {status}")
+    using_name = args.name
+    current_status = get_candidates_official(args.name)
+    print(print_results(current_status))
     sender = f"{smtp_username}@{smtp_server.removeprefix('smtp.')}"
     recipient = args.recipient
     subject = '[CNRS] Am I selected??'
-
     start_time = datetime.datetime.now()
     while True:
         body = "Have I made it to the next round?\n"
-        candidate_status, current_status, _ = get_candidates(using_name, args.year, sections_applied_to)
-        for section, status in current_status.items():
-            if init_status[section] != status:
-                print("Update has happened")
-                if candidate_init_status[section] == candidate_status[section]:
-                    print("You haven't made it to the next round :(")
-                    body += f"\tNope (section {section})\n"
-                else:
-                    print(f"You are now listed as {candidate_status[section]}")
-                    body += f"\tYes, You are now listed as {candidate_status[section]} in section {section}"
-        candidate_init_status = candidate_status
-        init_status = current_status
-        if body != "Have I made it to the next round?\n":
+        new_status = get_candidates_official(using_name, current_status)
+        if new_status != current_status:
+            new_status_str = print_results(new_status)
+            body += new_status_str
             message = f'Subject: {subject}\n\n{body}'
             smtp_connection = smtplib.SMTP(smtp_server, smtp_port)
             smtp_connection.starttls()  # enable TLS encryption
