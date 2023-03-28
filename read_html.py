@@ -35,7 +35,7 @@ def get_candidates_official(name_to_check, current_status=None):
         print("Checking all sections:")
         current_status = {}
         for section in SECTIONS:
-            print(section, end=", ")
+            print(section, end=", ", flush=True)
             for conc in range(1, 6):
                 with urllib.request.urlopen(url.format(section=section, adm=Stages.START.value, conc=conc)) as fp:
                     mybytes = fp.read()
@@ -63,7 +63,7 @@ def print_results(current_status):
 
 if __name__ == '__main__':
     description="""Are you selected yet?
-    (from https://www.coudert.name/concours_cnrs_{year}.html)"""
+    (from http://intersection.dsi.cnrs.fr)"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-s', '--sections', nargs='*', default=[],
                         type=int, help='Inform the sections to check')
