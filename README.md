@@ -15,7 +15,7 @@ amISelected --name lastname firstname \
             --year 2023 \
             --username your_username \
             --smtp smtp.your.server.com \
-            --port 587 \
+            --port 465 \
             --recipient you@mail.com \
 ```
 
