@@ -22,3 +22,7 @@ amISelected --name lastname firstname \
 Your `smtp` password will be then asked (leave empty if you don't want to recieve emails).
 
 It looks a bit fishy because it is ... But I don't know how to do otherwise
+
+
+
+
