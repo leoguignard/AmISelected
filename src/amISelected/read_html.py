@@ -38,6 +38,8 @@ def get_candidates(name_to_check, year, sections_to_check = [], first_run=False)
             continue
         stop = html_doc[start:].find('<h2>') + start
         lines = html_doc[start:stop].splitlines()
+        if len(lines)<2:
+            continue
         curr_status = 'Admis'
         if 'details' in lines[1]:
             l_num = 2
@@ -95,22 +97,23 @@ def get_candidates(name_to_check, year, sections_to_check = [], first_run=False)
                 current_status.setdefault(section, set()).add(status)
     return candidate_status, current_status, n
 
-if __name__ == '__main__':
+def run_whole():
     description="""Are you selected yet?
     (from https://www.coudert.name/concours_cnrs_{year}.html)"""
     parser = argparse.ArgumentParser(description=description)
+
     parser.add_argument('-s', '--sections', nargs='*', default=[],
                         type=int, help='Inform the sections to check')
     parser.add_argument('-n', '--name', nargs='+', default=['guignard', 'léo'],
                         type=str, help='Name to look for')
-    parser.add_argument('-y', '--year', default=2023,
+    parser.add_argument('-y', '--year', default=2024,
                         type=int, help='Inform the years to check')
-    parser.add_argument('-t', '--smtp', default='smtp.lis-lab.fr',
-                        type=str, help='smtp (default LIS)')
-    parser.add_argument('-p', '--port', default=587,
-                        type=int, help='port for email (default 587)')
-    parser.add_argument('-u', '--username', default='leo.guignard',
-                        type=str, help='password for email (default leo.guignard)')
+    parser.add_argument('-t', '--smtp', default='smtp.gmail.com',
+                        type=str, help='smtp (default Google)')
+    parser.add_argument('-p', '--port', default=465,
+                        type=int, help='port for email (default 465)')
+    parser.add_argument('-u', '--username', default='leo.guignard@gmail.com',
+                        type=str, help='password for email (default leo.guignard@gmail.com)')
     parser.add_argument('-r', '--recipient', default='leo.guignard@gmail.com',
                         type=str, help='email where to send the news (default leo.guignard@gmail.com)')
 
@@ -151,12 +154,10 @@ if __name__ == '__main__':
         init_status = current_status
         if body != "Have I made it to the next round?\n":
             message = f'Subject: {subject}\n\n{body}'
-            smtp_connection = smtplib.SMTP(smtp_server, smtp_port)
-            smtp_connection.starttls()  # enable TLS encryption
+            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             try:
-                smtp_connection.login(smtp_username, smtp_password)
-                smtp_connection.sendmail(sender, recipient, message)
-                smtp_connection.quit()
+                server.login(smtp_username, smtp_password)
+                server.sendmail(sender, recipient, message)
             except Exception as e:
                 print(f'Could not send the email: {e}')
         else:
@@ -165,13 +166,14 @@ if __name__ == '__main__':
         if 4<(datetime.datetime.now() - start_time).seconds/60/60:
             if 7<datetime.datetime.now().hour<20:
                 message = f'Subject: [CNRS] Still no news\n\nYep, nothing ...'
-                smtp_connection = smtplib.SMTP(smtp_server, smtp_port)
-                smtp_connection.starttls()  # enable TLS encryption
+                server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
                 try:
-                    smtp_connection.login(smtp_username, smtp_password)
-                    smtp_connection.sendmail(sender, recipient, message)
-                    smtp_connection.quit()
+                    server.login(smtp_username, smtp_password)
+                    server.sendmail(sender, recipient, message)
                 except Exception as e:
                     print(f'Could not send the email: {e}')
                 start_time = datetime.datetime.now()
-        sleep(10*60)
+        sleep(10*60) 
+
+if __name__ == '__main__':
+    run_whole()
