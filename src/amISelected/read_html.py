@@ -142,7 +142,7 @@ def run_whole():
         "--smtp",
         default="smtp.gmail.com",
         type=str,
-        help="smtp (default Google)",
+        help="smtp (default smtp.gmail.com)",
     )
     parser.add_argument(
         "-p",
@@ -156,7 +156,7 @@ def run_whole():
         "--username",
         default="leo.guignard@gmail.com",
         type=str,
-        help="password for email (default leo.guignard@gmail.com)",
+        help="username for email (default leo.guignard@gmail.com)",
     )
     parser.add_argument(
         "-r",

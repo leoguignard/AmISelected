@@ -22,7 +22,9 @@ The easiest is to install it directly with `pip`:
 pip install amISelected
 ```
 
-You can run the following command:
+## Usage
+
+Once installed, you can run the following command:
 
 ```shell
 amISelected --name lastname firstname \
@@ -39,5 +41,11 @@ It might look a bit fishy ... But I don't know how to do otherwise.
 The source code is available, you can still have a look at it or just not give your password.
 
 ## Troubleshooting
+
+You can use the help of the command:
+
+```shell
+amISelected --help
+```
 
 You might have problem to recieve emails. If so, you can always use a throwaway gmail account and setup a app password as explained [there](https://support.google.com/accounts/answer/185833).
