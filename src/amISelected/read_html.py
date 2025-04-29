@@ -165,6 +165,13 @@ def run_whole():
         type=str,
         help="email where to send the news (default leo.guignard@gmail.com)",
     )
+    parser.add_argument(
+        "-w",
+        "--wait",
+        default=10,
+        type=float,
+        help="Waiting time between each check (default 10 min)",
+    )
 
     args = parser.parse_args()
     args.name = " ".join(args.name)
@@ -174,6 +181,7 @@ def run_whole():
     smtp_server = args.smtp
     smtp_port = args.port
     smtp_username = args.username
+    wait = args.wait
 
     print(
         f"Please input the {args.smtp} account password for the user {smtp_username}."
@@ -189,6 +197,14 @@ def run_whole():
     sender = f"{smtp_username}@{smtp_server.removeprefix('smtp.')}"
     recipient = args.recipient
     subject = "[CNRS] Am I selected??"
+
+    message = "Subject: [CNRS] Starting the check\n\nJust making sure everything's working properly ..."
+    server = smtplib.SMTP_SSL("smtp.gmail.com", smtp_port)
+    try:
+        server.login(smtp_username, smtp_password)
+        server.sendmail(sender, recipient, message)
+    except Exception as e:
+        print(f"Could not send the email: {e}")
 
     start_time = datetime.datetime.now()
     while True:
@@ -230,7 +246,7 @@ def run_whole():
                 except Exception as e:
                     print(f"Could not send the email: {e}")
                 start_time = datetime.datetime.now()
-        sleep(10 * 60)
+        sleep(wait * 60)
 
 
 if __name__ == "__main__":
